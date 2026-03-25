@@ -232,17 +232,42 @@
   .chip-match { background: var(--green-light); color: var(--green); }
   .chip-miss { background: var(--red-light); color: var(--red); }
 
-  .spinner {
-    display: inline-block;
-    width: 16px; height: 16px;
-    border: 2px solid rgba(255,255,255,0.3);
-    border-top-color: white;
-    border-radius: 50%;
-    animation: spin 0.7s linear infinite;
-    vertical-align: middle;
-    margin-right: 8px;
+  .copy-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 11px;
+    padding: 5px 12px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-family: 'Mulish', sans-serif;
+    transition: all 0.2s;
+    margin-top: 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
   }
-  @keyframes spin { to { transform: rotate(360deg); } }
+  .copy-btn:hover { border-color: var(--purple); color: var(--purple); }
+  .copy-btn.copied { border-color: var(--green); color: var(--green); }
+
+  .pf-footer {
+    width: 100%;
+    text-align: center;
+    padding: 14px 20px;
+    border-top: 1px solid var(--border);
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    background: var(--white);
+    margin-top: 8px;
+  }
+  .pf-footer a { color: inherit; text-decoration: none; transition: color 0.2s; }
+  .pf-footer a:hover { color: var(--purple); }
+  .pf-dot { opacity: 0.35; }
 </style>
 </head>
 <body>
@@ -299,13 +324,24 @@
 
   <div id="resultsSection">
     <div class="score-hero" id="scoreHero"></div>
-
     <div class="results-grid" id="resultsGrid" style="margin-top:16px"></div>
+    <div style="text-align:center;margin-top:8px">
+      <button class="copy-btn" id="copyBtn" onclick="copyResults()" style="display:none">📋 Copy Analysis</button>
+    </div>
   </div>
 
 </div>
 
+<footer class="pf-footer">
+  <span>Chinedum Aranotu · 2026</span>
+  <span class="pf-dot">·</span>
+  <a href="https://github.com/aranotuchinedum2" target="_blank" rel="noopener">github.com/aranotuchinedum2</a>
+</footer>
+
 <script>
+// This app was built by CeeJay for Chinedum Aranotu – 2026
+let lastResults = null;
+
 async function analyze() {
   const apiKey = document.getElementById('apiKey').value.trim();
   const resume = document.getElementById('resumeText').value.trim();
@@ -354,15 +390,35 @@ ${job}`;
       })
     });
     const data = await res.json();
+    if (data.error) throw new Error(data.error.message || 'API error');
     const raw = data.content?.[0]?.text || '';
     const json = JSON.parse(raw.replace(/```json|```/g, '').trim());
+    lastResults = json;
     renderResults(json);
   } catch(e) {
-    alert('Error. Check your API key and try again.');
+    alert(`Error: ${e.message}. Check your API key and try again.`);
     console.error(e);
   }
   btn.disabled = false;
   btn.innerHTML = '🔍 Analyze My Resume Match';
+}
+
+function copyResults() {
+  if (!lastResults) return;
+  const r = lastResults;
+  const text = `RESUME MATCH ANALYSIS — ${r.match_score}% (${r.score_label})\n\n` +
+    `${r.score_summary}\n\n` +
+    `STRENGTHS:\n${r.strengths.map(s => `• ${s}`).join('\n')}\n\n` +
+    `GAPS:\n${r.gaps.map(g => `• ${g}`).join('\n')}\n\n` +
+    `QUICK WINS:\n${r.quick_wins.map(q => `• ${q}`).join('\n')}\n\n` +
+    `KEYWORDS MATCHED: ${r.keywords_matched.join(', ')}\n` +
+    `KEYWORDS MISSING: ${r.keywords_missing.join(', ')}`;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('copyBtn');
+    btn.textContent = '✓ Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = '📋 Copy Analysis'; btn.classList.remove('copied'); }, 2000);
+  });
 }
 
 function renderResults(r) {
@@ -403,6 +459,8 @@ function renderResults(r) {
         </div>
       </div>
     </div>`;
+
+  document.getElementById('copyBtn').style.display = 'inline-flex';
 }
 </script>
 </body>

@@ -217,6 +217,40 @@
   @keyframes spin { to { transform: rotate(360deg); } }
 
   footer { text-align: center; padding: 20px; font-size: 11px; color: var(--muted); letter-spacing: 1px; }
+
+  .copy-summary-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 11px;
+    padding: 5px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: 'IBM Plex Sans', sans-serif;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .copy-summary-btn:hover { border-color: var(--ink); color: var(--ink); }
+  .copy-summary-btn.copied { border-color: var(--green, #059669); color: var(--green, #059669); }
+
+  .pf-footer {
+    text-align: center;
+    padding: 14px 20px;
+    border-top: 1px solid var(--border);
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    background: var(--bg);
+  }
+  .pf-footer a { color: inherit; text-decoration: none; transition: color 0.2s; }
+  .pf-footer a:hover { color: var(--ink); }
+  .pf-dot { opacity: 0.35; }
 </style>
 </head>
 <body>
@@ -268,13 +302,20 @@
     <span>Original: <strong id="origWords">—</strong> words</span>
     <span>Summary: <strong id="sumWords">—</strong> words</span>
     <span>Reduction: <strong id="reduction">—</strong></span>
+    <button class="copy-summary-btn" id="copySummaryBtn" onclick="copySummary()" style="display:none;margin-left:auto">📋 Copy Summary</button>
   </div>
 </div>
 
-<footer>AI PROJECT — Built with Claude API · Prompt Engineering Demo</footer>
+<footer class="pf-footer">
+  <span>Chinedum Aranotu · 2026</span>
+  <span class="pf-dot">·</span>
+  <a href="https://github.com/aranotuchinedum2" target="_blank" rel="noopener">github.com/aranotuchinedum2</a>
+</footer>
 
 <script>
+// This app was built by CeeJay for Chinedum Aranotu – 2026
 let currentMode = 'bullets';
+let lastSummaryText = '';
 
 function setMode(mode, el) {
   currentMode = mode;
@@ -290,10 +331,22 @@ inputEl.addEventListener('input', () => {
 
 function clearAll() {
   inputEl.value = '';
+  lastSummaryText = '';
   document.getElementById('wordCount').textContent = '0 words';
   document.getElementById('outputArea').innerHTML = '<span class="placeholder">Your summary will appear here after you click Summarize →</span>';
   document.getElementById('statsBar').style.display = 'none';
   document.getElementById('summaryCount').textContent = '';
+  document.getElementById('copySummaryBtn').style.display = 'none';
+}
+
+function copySummary() {
+  if (!lastSummaryText) return;
+  navigator.clipboard.writeText(lastSummaryText).then(() => {
+    const btn = document.getElementById('copySummaryBtn');
+    btn.textContent = '✓ Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = '📋 Copy Summary'; btn.classList.remove('copied'); }, 2000);
+  });
 }
 
 const PROMPTS = {
@@ -332,11 +385,14 @@ async function summarize() {
       })
     });
     const data = await res.json();
+    if (data.error) throw new Error(data.error.message || 'API error');
     const reply = data.content?.[0]?.text || 'Error — check your API key.';
+    lastSummaryText = reply;
     renderOutput(reply);
     updateStats(text, reply);
+    document.getElementById('copySummaryBtn').style.display = 'inline-flex';
   } catch(e) {
-    outputArea.innerHTML = '<span class="placeholder">⚠️ Network error. Check your API key.</span>';
+    outputArea.innerHTML = `<span class="placeholder">⚠️ ${e.message}. Check your API key.</span>`;
   }
   btn.disabled = false;
   btn.innerHTML = 'Summarize →';

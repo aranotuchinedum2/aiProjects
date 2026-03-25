@@ -311,6 +311,41 @@
   .panel-a .dot { background: var(--a); }
   .panel-b .dot { background: var(--b); }
   @keyframes pulse { 0%,60%,100%{opacity:0.3;transform:scale(0.8)} 30%{opacity:1;transform:scale(1)} }
+
+  .copy-panel-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: var(--mono);
+    transition: all 0.2s;
+    display: none;
+  }
+  .panel-a .copy-panel-btn:hover { border-color: var(--a); color: var(--a); }
+  .panel-b .copy-panel-btn:hover { border-color: var(--b); color: var(--b); }
+  .copy-panel-btn.copied { color: var(--green); border-color: var(--green); }
+
+  .pf-footer {
+    width: 100%;
+    text-align: center;
+    padding: 14px 20px;
+    border-top: 1px solid var(--border);
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    background: var(--panel);
+    margin-top: 0;
+  }
+  .pf-footer a { color: inherit; text-decoration: none; transition: color 0.2s; }
+  .pf-footer a:hover { color: var(--a); }
+  .pf-dot { opacity: 0.35; }
 </style>
 </head>
 <body>
@@ -368,6 +403,7 @@
       <div class="output-footer" id="footerA">
         <span>words: <span class="stat-val" id="wordsA">—</span></span>
         <span>time: <span class="stat-val" id="timeA">—</span></span>
+        <button class="copy-panel-btn" id="copyA" onclick="copyPanel('A')">copy</button>
       </div>
     </div>
 
@@ -392,6 +428,7 @@ Keep each section to 2-3 sentences max. Be concrete, not abstract.</textarea>
       <div class="output-footer" id="footerB">
         <span>words: <span class="stat-val" id="wordsB">—</span></span>
         <span>time: <span class="stat-val" id="timeB">—</span></span>
+        <button class="copy-panel-btn" id="copyB" onclick="copyPanel('B')">copy</button>
       </div>
     </div>
 
@@ -406,9 +443,29 @@ Keep each section to 2-3 sentences max. Be concrete, not abstract.</textarea>
 
 </main>
 
+<footer class="pf-footer">
+  <span>Chinedum Aranotu · 2026</span>
+  <span class="pf-dot">·</span>
+  <a href="https://github.com/aranotuchinedum2" target="_blank" rel="noopener">github.com/aranotuchinedum2</a>
+</footer>
+
 <script>
+// This app was built by CeeJay for Chinedum Aranotu – 2026
+const outputStore = { A: '', B: '' };
+
 function setQ(q) {
   document.getElementById('question').value = q;
+}
+
+function copyPanel(panel) {
+  const text = outputStore[panel];
+  if (!text) return;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('copy' + panel);
+    btn.textContent = '✓ copied';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'copy'; btn.classList.remove('copied'); }, 2000);
+  });
 }
 
 async function run() {
@@ -423,6 +480,12 @@ async function run() {
   const btn = document.getElementById('runBtn');
   btn.disabled = true;
   btn.textContent = '⏳ Running...';
+
+  // Reset copy buttons
+  ['A','B'].forEach(p => {
+    outputStore[p] = '';
+    document.getElementById('copy' + p).style.display = 'none';
+  });
 
   setLoading('A'); setLoading('B');
   document.getElementById('analysisCard').style.display = 'none';
@@ -440,8 +503,8 @@ async function run() {
 
 function setLoading(panel) {
   const el = document.getElementById('output' + panel);
-  const side = panel === 'A' ? 'panel-a' : 'panel-b';
-  el.innerHTML = `<div class="dot-loader"><div class="dot" style="background:var(--${panel === 'A' ? 'a' : 'b'})"></div><div class="dot" style="background:var(--${panel === 'A' ? 'a' : 'b'})"></div><div class="dot" style="background:var(--${panel === 'A' ? 'a' : 'b'})"></div></div>`;
+  const color = panel === 'A' ? 'var(--a)' : 'var(--b)';
+  el.innerHTML = `<div class="dot-loader"><div class="dot" style="background:${color}"></div><div class="dot" style="background:${color}"></div><div class="dot" style="background:${color}"></div></div>`;
 }
 
 async function callAPI(apiKey, system, question, panel) {
@@ -463,16 +526,28 @@ async function callAPI(apiKey, system, question, panel) {
       })
     });
     const data = await res.json();
+    if (data.error) throw new Error(data.error.message || 'API error');
     const reply = data.content?.[0]?.text || 'Error.';
     const elapsed = ((Date.now() - start) / 1000).toFixed(1);
     const wordCount = reply.trim().split(/\s+/).length;
 
-    document.getElementById('output' + panel).innerHTML = `<div class="output-text">${reply}</div>`;
+    outputStore[panel] = reply;
+    const outputEl = document.getElementById('output' + panel);
+    outputEl.innerHTML = '';
+    const div = document.createElement('div');
+    div.className = 'output-text';
+    div.textContent = reply;
+    outputEl.appendChild(div);
+
     document.getElementById('words' + panel).textContent = wordCount;
     document.getElementById('time' + panel).textContent = elapsed + 's';
+
+    const copyBtn = document.getElementById('copy' + panel);
+    copyBtn.style.display = 'inline-block';
+
     return reply;
   } catch(e) {
-    document.getElementById('output' + panel).innerHTML = `<div class="placeholder">⚠️ Error — check API key</div>`;
+    document.getElementById('output' + panel).innerHTML = `<div class="placeholder">⚠️ ${e.message}</div>`;
     return null;
   }
 }
@@ -511,15 +586,19 @@ Respond ONLY with JSON (no markdown):
       })
     });
     const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
     const raw = data.content?.[0]?.text || '';
     const json = JSON.parse(raw.replace(/```json|```/g, '').trim());
     renderAnalysis(json);
-  } catch(e) { console.error(e); }
+  } catch(e) { console.error('Analysis error:', e); }
 }
 
 function renderAnalysis(r) {
   const card = document.getElementById('analysisCard');
   card.style.display = 'block';
+  // Auto-scroll to analysis card
+  setTimeout(() => card.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);
+
   const wClass = r.winner === 'A' ? 'winner-a' : 'winner-b';
   document.getElementById('analysisBody').innerHTML = `
     <div class="analysis-item">

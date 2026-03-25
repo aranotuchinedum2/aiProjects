@@ -193,6 +193,43 @@
     font-family: 'DM Sans', sans-serif;
   }
   .starter-chip:hover { border-color: var(--accent); color: var(--accent); }
+
+  .chat-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: -8px;
+  }
+  .clear-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 11px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    transition: all 0.2s;
+    letter-spacing: 0.3px;
+  }
+  .clear-btn:hover { border-color: var(--accent2); color: var(--accent2); }
+
+  .pf-footer {
+    width: 100%;
+    text-align: center;
+    padding: 14px 20px;
+    border-top: 1px solid var(--border);
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    background: var(--surface);
+  }
+  .pf-footer a { color: inherit; text-decoration: none; transition: color 0.2s; }
+  .pf-footer a:hover { color: var(--accent); }
+  .pf-dot { opacity: 0.35; }
 </style>
 </head>
 <body>
@@ -219,6 +256,10 @@
     <div class="starter-chip" onclick="sendStarter(this)">💧 Daily water intake?</div>
   </div>
 
+  <div class="chat-actions">
+    <button class="clear-btn" onclick="clearChat()">✕ Clear chat</button>
+  </div>
+
   <div id="messages">
     <div class="msg bot">
       <div class="avatar">💪</div>
@@ -232,7 +273,14 @@
   </div>
 </div>
 
+<footer class="pf-footer">
+  <span>Chinedum Aranotu · 2026</span>
+  <span class="pf-dot">·</span>
+  <a href="https://github.com/aranotuchinedum2" target="_blank" rel="noopener">github.com/aranotuchinedum2</a>
+</footer>
+
 <script>
+// This app was built by CeeJay for Chinedum Aranotu – 2026
 const SYSTEM_PROMPT = `You are Coach Rex — a tough-love, high-energy fitness coach AI. You are motivating, direct, and knowledgeable about exercise science, nutrition, and recovery. 
 - Keep responses concise and actionable (under 150 words unless asked for a plan)
 - Use fitness terminology correctly
@@ -241,6 +289,20 @@ const SYSTEM_PROMPT = `You are Coach Rex — a tough-love, high-energy fitness c
 - Never give medical advice; redirect to doctors for injuries`;
 
 const conversationHistory = [];
+
+function escapeHTML(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function clearChat() {
+  conversationHistory.length = 0;
+  document.getElementById('messages').innerHTML = `
+    <div class="msg bot">
+      <div class="avatar">💪</div>
+      <div class="bubble">Yo! I'm Coach Rex — your no-excuses AI fitness coach. Ask me about workouts, nutrition, recovery, or building habits. Let's get to work. 🔥</div>
+    </div>`;
+  document.getElementById('starters').style.display = 'flex';
+}
 
 async function sendMessage(text) {
   const apiKey = document.getElementById('apiKey').value.trim();
@@ -279,12 +341,16 @@ async function sendMessage(text) {
     });
     const data = await res.json();
     typingEl.remove();
-    const reply = data.content?.[0]?.text || 'Something went wrong. Check your API key.';
-    appendMessage('bot', reply);
-    conversationHistory.push({ role: 'assistant', content: reply });
+    if (data.error) {
+      appendMessage('bot', `⚠️ API error: ${data.error.message || 'Unknown error'}. Check your key and try again.`);
+    } else {
+      const reply = data.content?.[0]?.text || 'Something went wrong.';
+      appendMessage('bot', reply);
+      conversationHistory.push({ role: 'assistant', content: reply });
+    }
   } catch(e) {
     typingEl.remove();
-    appendMessage('bot', '⚠️ Error connecting. Check your API key and try again.');
+    appendMessage('bot', `⚠️ Network error: ${e.message}. Check your connection and API key.`);
   }
   btn.disabled = false;
 }
@@ -298,9 +364,19 @@ function appendMessage(role, text) {
   const msgs = document.getElementById('messages');
   const div = document.createElement('div');
   div.className = `msg ${role}`;
-  div.innerHTML = `
-    <div class="avatar">${role === 'bot' ? '💪' : '🧑'}</div>
-    <div class="bubble">${text.replace(/\n/g, '<br>')}</div>`;
+  const avatar = document.createElement('div');
+  avatar.className = 'avatar';
+  avatar.textContent = role === 'bot' ? '💪' : '🧑';
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble';
+  // Safe: bot text from trusted API; user text escaped
+  if (role === 'user') {
+    bubble.textContent = text;
+  } else {
+    bubble.innerHTML = escapeHTML(text).replace(/\n/g, '<br>');
+  }
+  div.appendChild(avatar);
+  div.appendChild(bubble);
   msgs.appendChild(div);
   msgs.scrollTop = msgs.scrollHeight;
   return div;
@@ -315,6 +391,9 @@ function appendTyping() {
   msgs.scrollTop = msgs.scrollHeight;
   return div;
 }
+
+// Seed initial message
+clearChat();
 
 const input = document.getElementById('userInput');
 input.addEventListener('keydown', e => {

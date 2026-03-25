@@ -346,6 +346,37 @@
   }
   .export-btn:hover { border-color: var(--emerald); color: var(--emerald); }
 
+  .clear-results-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 7px 16px;
+    border-radius: 8px;
+    font-size: 12px;
+    cursor: pointer;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    transition: all 0.15s;
+  }
+  .clear-results-btn:hover { border-color: var(--rose); color: var(--rose); }
+
+  .pf-footer {
+    width: 100%;
+    text-align: center;
+    padding: 12px 20px;
+    border-top: 1px solid var(--border);
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    background: var(--surface);
+  }
+  .pf-footer a { color: inherit; text-decoration: none; transition: color 0.2s; }
+  .pf-footer a:hover { color: var(--cyan); }
+  .pf-dot { opacity: 0.35; }
+
   .spinner {
     display: inline-block;
     width: 14px; height: 14px;
@@ -429,6 +460,7 @@ The instructions are confusing"></textarea>
       <div class="table-footer" id="tableFooter">
         <span>Labeled: <strong id="statLabeled">0</strong></span>
         <span>Avg confidence: <strong id="statConf">—</strong></span>
+        <button class="clear-results-btn" onclick="clearResults()">✕ Clear</button>
         <button class="export-btn" onclick="exportCSV()">⬇ Export CSV</button>
       </div>
     </div>
@@ -436,7 +468,14 @@ The instructions are confusing"></textarea>
   </div>
 </div>
 
+<footer class="pf-footer">
+  <span>Chinedum Aranotu · 2026</span>
+  <span class="pf-dot">·</span>
+  <a href="https://github.com/aranotuchinedum2" target="_blank" rel="noopener">github.com/aranotuchinedum2</a>
+</footer>
+
 <script>
+// This app was built by CeeJay for Chinedum Aranotu – 2026
 const LABEL_COLORS = ['#3b82f6','#10b981','#f59e0b','#f43f5e','#8b5cf6','#06b6d4','#ec4899','#84cc16'];
 
 let labels = [
@@ -510,6 +549,15 @@ document.getElementById('batchInput').addEventListener('input', () => {
   document.getElementById('lineCount').textContent = lines + ' items';
 });
 
+function clearResults() {
+  results = [];
+  document.getElementById('resultsTable').style.display = 'none';
+  document.getElementById('tableBody').innerHTML = '';
+  document.getElementById('statLabeled').textContent = '0';
+  document.getElementById('statConf').textContent = '—';
+  render();
+}
+
 async function runLabeling() {
   const apiKey = document.getElementById('apiKey').value.trim();
   if (!apiKey) { alert('Enter your Anthropic API key.'); return; }
@@ -556,11 +604,12 @@ ${items.map((t, i) => `${i + 1}. ${t}`).join('\n')}`;
       })
     });
     const data = await res.json();
+    if (data.error) throw new Error(data.error.message || 'API error');
     const raw2 = data.content?.[0]?.text || '[]';
     results = JSON.parse(raw2.replace(/```json|```/g, '').trim());
     renderResults();
   } catch(e) {
-    alert('Error. Check your API key and try again.');
+    alert(`Error: ${e.message}. Check your API key and try again.`);
     console.error(e);
   }
   btn.disabled = false;

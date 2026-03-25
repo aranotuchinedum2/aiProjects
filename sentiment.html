@@ -210,6 +210,42 @@
   .h-text { font-size: 13px; color: var(--text); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .h-badge { font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 10px; flex-shrink: 0; }
 
+  .copy-result-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 11px;
+    padding: 5px 14px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-family: 'Space Grotesk', sans-serif;
+    transition: all 0.2s;
+    margin-top: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .copy-result-btn:hover { border-color: var(--neu); color: var(--neu); }
+  .copy-result-btn.copied { border-color: var(--pos); color: var(--pos); }
+
+  .pf-footer {
+    width: 100%;
+    text-align: center;
+    padding: 14px 20px;
+    border-top: 1px solid var(--border);
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 8px;
+  }
+  .pf-footer a { color: inherit; text-decoration: none; transition: color 0.2s; }
+  .pf-footer a:hover { color: var(--neu); }
+  .pf-dot { opacity: 0.35; }
+
   .spinner {
     display: inline-block;
     width: 16px; height: 16px;
@@ -254,6 +290,9 @@
       <h4>AI Explanation</h4>
       <div id="explanationText"></div>
     </div>
+    <div style="text-align:right">
+      <button class="copy-result-btn" id="copyResultBtn" onclick="copyResult()" style="display:none">📋 Copy Result</button>
+    </div>
   </div>
 
   <div class="card history-section" id="historySection" style="display:none;">
@@ -263,7 +302,14 @@
 
 </div>
 
+<footer class="pf-footer">
+  <span>Chinedum Aranotu · 2026</span>
+  <span class="pf-dot">·</span>
+  <a href="https://github.com/aranotuchinedum2" target="_blank" rel="noopener">github.com/aranotuchinedum2</a>
+</footer>
+
 <script>
+// This app was built by CeeJay for Chinedum Aranotu – 2026
 const EXAMPLES = [
   "This product is absolutely amazing! Best purchase I've made all year. The quality is outstanding and delivery was super fast.",
   "Terrible customer service. Waited 3 weeks for a broken item. Completely unacceptable. Never buying again.",
@@ -273,6 +319,7 @@ const EXAMPLES = [
 ];
 let exIdx = 0;
 const history = [];
+let lastResult = null;
 
 const COLORS = { POSITIVE: 'var(--pos)', NEGATIVE: 'var(--neg)', NEUTRAL: 'var(--neu)', MIXED: 'var(--mix)' };
 const EMOJIS = { POSITIVE: '😊', NEGATIVE: '😠', NEUTRAL: '😐', MIXED: '🤔' };
@@ -325,15 +372,29 @@ Text: "${text}"`;
       })
     });
     const data = await res.json();
+    if (data.error) throw new Error(data.error.message || 'API error');
     const raw = data.content?.[0]?.text || '';
     const json = JSON.parse(raw.replace(/```json|```/g, '').trim());
+    lastResult = { ...json, text };
     renderResult(json, text);
   } catch(e) {
-    alert('Error: Check your API key or try again.');
+    alert(`Error: ${e.message}. Check your API key or try again.`);
     console.error(e);
   }
   btn.disabled = false;
   btn.innerHTML = 'Analyze Sentiment →';
+}
+
+function copyResult() {
+  if (!lastResult) return;
+  const r = lastResult;
+  const text = `SENTIMENT: ${r.sentiment} (${r.confidence}% confident)\n\nScores: Positive ${r.scores.positive}% · Negative ${r.scores.negative}% · Neutral ${r.scores.neutral}% · Mixed ${r.scores.mixed}%\n\nExplanation: ${r.explanation}\n\nAnalyzed text: "${r.text}"`;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('copyResultBtn');
+    btn.textContent = '✓ Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = '📋 Copy Result'; btn.classList.remove('copied'); }, 2000);
+  });
 }
 
 function renderResult(r, text) {
@@ -341,14 +402,12 @@ function renderResult(r, text) {
   card.style.display = 'block';
   card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
-  // Badge
   document.getElementById('badge').innerHTML = `
     <div class="sentiment-badge badge-${r.sentiment}">
       ${EMOJIS[r.sentiment]} ${r.sentiment}
       <span style="font-size:13px;font-weight:400;opacity:0.7">${r.confidence}% confident</span>
     </div>`;
 
-  // Scores
   const scoreKeys = ['positive','negative','neutral','mixed'];
   const classes = ['s-pos','s-neg','s-neu','s-mix'];
   document.getElementById('scoreRow').innerHTML = scoreKeys.map((k, i) => `
@@ -357,7 +416,6 @@ function renderResult(r, text) {
       <div class="s-val ${classes[i]}">${r.scores[k]}</div>
     </div>`).join('');
 
-  // Meters
   const meterColors = [COLORS.POSITIVE, COLORS.NEGATIVE, COLORS.NEUTRAL, COLORS.MIXED];
   document.getElementById('meterRow').innerHTML = scoreKeys.map((k, i) => `
     <div>
@@ -372,20 +430,30 @@ function renderResult(r, text) {
     });
   }, 50);
 
-  // Explanation
   document.getElementById('explanationText').textContent = r.explanation;
+  document.getElementById('copyResultBtn').style.display = 'inline-flex';
 
-  // History
-  history.unshift({ text: text.slice(0, 60) + (text.length > 60 ? '...' : ''), sentiment: r.sentiment });
+  // History — use index to avoid XSS; store full text in array
+  history.unshift({ text: text.slice(0, 60) + (text.length > 60 ? '…' : ''), full: text, sentiment: r.sentiment });
   if (history.length > 5) history.pop();
+
   const histSection = document.getElementById('historySection');
   histSection.style.display = 'block';
-  document.getElementById('historyList').innerHTML = history.map(h => `
-    <div class="history-item" onclick="document.getElementById('inputText').value='${h.text}'">
+  const histList = document.getElementById('historyList');
+  histList.innerHTML = '';
+  history.forEach((h, i) => {
+    const item = document.createElement('div');
+    item.className = 'history-item';
+    item.innerHTML = `
       <div class="h-dot" style="background:${COLORS[h.sentiment]}"></div>
-      <div class="h-text">${h.text}</div>
-      <div class="h-badge" style="background:${COLORS[h.sentiment]}22;color:${COLORS[h.sentiment]}">${h.sentiment}</div>
-    </div>`).join('');
+      <div class="h-text"></div>
+      <div class="h-badge" style="background:${COLORS[h.sentiment]}22;color:${COLORS[h.sentiment]}">${h.sentiment}</div>`;
+    item.querySelector('.h-text').textContent = h.text;
+    item.addEventListener('click', () => {
+      document.getElementById('inputText').value = h.full;
+    });
+    histList.appendChild(item);
+  });
 }
 </script>
 </body>
