@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>ResumeAI — Smart Resume Gap Analyzer</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=Mulish:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #f8f6ff;
+    --white: #ffffff;
+    --ink: #14102a;
+    --purple: #5b21b6;
+    --purple-light: #ede9fe;
+    --green: #059669;
+    --green-light: #d1fae5;
+    --red: #dc2626;
+    --red-light: #fee2e2;
+    --yellow: #d97706;
+    --yellow-light: #fef3c7;
+    --border: #e2dff8;
+    --muted: #9ca3af;
+    --text2: #4b5563;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Mulish', sans-serif;
+    min-height: 100vh;
+  }
+
+  nav {
+    background: var(--ink);
+    padding: 14px 32px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .nav-logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 20px; color: white; }
+  .nav-logo span { color: #a78bfa; }
+  .nav-tag {
+    margin-left: auto;
+    background: rgba(167,139,250,0.2);
+    color: #a78bfa;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 12px;
+    border-radius: 20px;
+    letter-spacing: 0.5px;
+  }
+
+  .hero-strip {
+    background: linear-gradient(135deg, var(--purple), #7c3aed);
+    color: white;
+    text-align: center;
+    padding: 40px 20px;
+  }
+  .hero-strip h1 { font-family: 'Syne', sans-serif; font-size: 32px; font-weight: 800; }
+  .hero-strip p { font-size: 14px; opacity: 0.8; margin-top: 8px; }
+
+  .container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 32px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+  .card-header {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--bg);
+  }
+  .card-header .icon {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    background: var(--purple-light);
+  }
+  .card-header h3 { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700; }
+  .card-header p { font-size: 12px; color: var(--muted); margin-top: 1px; }
+  .card-body { padding: 20px; }
+
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  @media(max-width: 620px) { .two-col { grid-template-columns: 1fr; } }
+
+  label.field-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  textarea, input[type="password"] {
+    width: 100%;
+    background: var(--bg);
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-family: 'Mulish', sans-serif;
+    font-size: 13px;
+    color: var(--ink);
+    outline: none;
+    resize: vertical;
+    transition: border 0.2s;
+    line-height: 1.6;
+  }
+  textarea:focus, input[type="password"]:focus { border-color: var(--purple); }
+  textarea::placeholder { color: var(--muted); }
+  #resumeText { min-height: 200px; }
+  #jobText { min-height: 200px; }
+
+  .analyze-btn {
+    width: 100%;
+    background: linear-gradient(135deg, var(--purple), #7c3aed);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    padding: 15px;
+    font-size: 15px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.15s;
+  }
+  .analyze-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+  .analyze-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  /* Results */
+  #resultsSection { display: none; }
+
+  .score-hero {
+    text-align: center;
+    padding: 28px 20px;
+    background: linear-gradient(135deg, var(--ink), #2d1b69);
+    color: white;
+    border-radius: 16px;
+    position: relative;
+    overflow: hidden;
+  }
+  .score-hero::before {
+    content: '';
+    position: absolute;
+    top: -40px; right: -40px;
+    width: 200px; height: 200px;
+    background: rgba(167,139,250,0.1);
+    border-radius: 50%;
+  }
+  .score-circle {
+    width: 100px; height: 100px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.1);
+    border: 4px solid #a78bfa;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 16px;
+    font-size: 36px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    position: relative;
+    z-index: 1;
+  }
+  .score-hero h2 { font-family: 'Syne', sans-serif; font-size: 20px; position: relative; z-index: 1; }
+  .score-hero p { font-size: 13px; opacity: 0.7; margin-top: 6px; position: relative; z-index: 1; }
+
+  .results-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  @media(max-width: 620px) { .results-grid { grid-template-columns: 1fr; } }
+
+  .result-block {
+    border-radius: 12px;
+    padding: 16px;
+  }
+  .rb-green { background: var(--green-light); border: 1px solid #6ee7b7; }
+  .rb-red { background: var(--red-light); border: 1px solid #fca5a5; }
+  .rb-yellow { background: var(--yellow-light); border: 1px solid #fcd34d; }
+  .rb-purple { background: var(--purple-light); border: 1px solid #c4b5fd; }
+
+  .rb-title {
+    display: flex; align-items: center; gap: 8px;
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 10px;
+  }
+  .rb-green .rb-title { color: var(--green); }
+  .rb-red .rb-title { color: var(--red); }
+  .rb-yellow .rb-title { color: var(--yellow); }
+  .rb-purple .rb-title { color: var(--purple); }
+
+  .rb-item {
+    display: flex; align-items: flex-start; gap: 8px;
+    font-size: 13px;
+    line-height: 1.5;
+    margin-bottom: 8px;
+    color: var(--ink);
+  }
+  .rb-bullet { font-size: 16px; line-height: 1.2; flex-shrink: 0; }
+
+  .full-width { grid-column: 1 / -1; }
+
+  .keyword-chips {
+    display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px;
+  }
+  .chip {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .chip-match { background: var(--green-light); color: var(--green); }
+  .chip-miss { background: var(--red-light); color: var(--red); }
+
+  .spinner {
+    display: inline-block;
+    width: 16px; height: 16px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    vertical-align: middle;
+    margin-right: 8px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">Resume<span>AI</span></div>
+  <div class="nav-tag">AI PROJECT · Claude API</div>
+</nav>
+
+<div class="hero-strip">
+  <h1>Smart Resume Gap Analyzer</h1>
+  <p>Paste your resume + job description — AI finds the gaps and tells you exactly what to fix</p>
+</div>
+
+<div class="container">
+
+  <div class="card">
+    <div class="card-header">
+      <div class="icon">🔑</div>
+      <div>
+        <h3>API Key</h3>
+        <p>Your Anthropic key (never stored)</p>
+      </div>
+    </div>
+    <div class="card-body">
+      <input type="password" id="apiKey" placeholder="sk-ant-..." />
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="icon">📝</div>
+      <div>
+        <h3>Your Resume + Job Description</h3>
+        <p>Paste both to get a full gap analysis</p>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="two-col">
+        <div>
+          <label class="field-label">Your Resume</label>
+          <textarea id="resumeText" placeholder="Paste your resume text here (work experience, skills, education)..."></textarea>
+        </div>
+        <div>
+          <label class="field-label">Job Description</label>
+          <textarea id="jobText" placeholder="Paste the job posting here (requirements, responsibilities, qualifications)..."></textarea>
+        </div>
+      </div>
+      <div style="margin-top:16px">
+        <button class="analyze-btn" id="analyzeBtn" onclick="analyze()">🔍 Analyze My Resume Match</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="resultsSection">
+    <div class="score-hero" id="scoreHero"></div>
+
+    <div class="results-grid" id="resultsGrid" style="margin-top:16px"></div>
+  </div>
+
+</div>
+
+<script>
+async function analyze() {
+  const apiKey = document.getElementById('apiKey').value.trim();
+  const resume = document.getElementById('resumeText').value.trim();
+  const job = document.getElementById('jobText').value.trim();
+
+  if (!apiKey) { alert('Enter your Anthropic API key.'); return; }
+  if (!resume || !job) { alert('Please paste both your resume and the job description.'); return; }
+
+  const btn = document.getElementById('analyzeBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Analyzing your match...';
+
+  const PROMPT = `You are an expert resume coach and ATS specialist. Analyze the candidate's resume against the job description.
+
+Respond ONLY with a JSON object (no markdown):
+{
+  "match_score": <0-100>,
+  "score_label": "<brief label like 'Strong Match' or 'Needs Work'>",
+  "score_summary": "<1 sentence about overall fit>",
+  "strengths": ["<strength 1>", "<strength 2>", "<strength 3>"],
+  "gaps": ["<gap 1>", "<gap 2>", "<gap 3>"],
+  "quick_wins": ["<specific fix 1>", "<specific fix 2>", "<specific fix 3>"],
+  "keywords_matched": ["<keyword>", "<keyword>", "<keyword>"],
+  "keywords_missing": ["<keyword>", "<keyword>", "<keyword>"]
+}
+
+Resume:
+${resume}
+
+Job Description:
+${job}`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{ role: 'user', content: PROMPT }]
+      })
+    });
+    const data = await res.json();
+    const raw = data.content?.[0]?.text || '';
+    const json = JSON.parse(raw.replace(/```json|```/g, '').trim());
+    renderResults(json);
+  } catch(e) {
+    alert('Error. Check your API key and try again.');
+    console.error(e);
+  }
+  btn.disabled = false;
+  btn.innerHTML = '🔍 Analyze My Resume Match';
+}
+
+function renderResults(r) {
+  const section = document.getElementById('resultsSection');
+  section.style.display = 'block';
+  section.scrollIntoView({ behavior: 'smooth' });
+
+  const scoreColor = r.match_score >= 70 ? '#6ee7b7' : r.match_score >= 50 ? '#fcd34d' : '#fca5a5';
+
+  document.getElementById('scoreHero').innerHTML = `
+    <div class="score-circle" style="border-color:${scoreColor}">${r.match_score}%</div>
+    <h2>${r.score_label}</h2>
+    <p>${r.score_summary}</p>`;
+
+  document.getElementById('resultsGrid').innerHTML = `
+    <div class="result-block rb-green">
+      <div class="rb-title">✅ Strengths</div>
+      ${r.strengths.map(s => `<div class="rb-item"><span class="rb-bullet">▸</span>${s}</div>`).join('')}
+    </div>
+    <div class="result-block rb-red">
+      <div class="rb-title">🚨 Gaps to Fix</div>
+      ${r.gaps.map(g => `<div class="rb-item"><span class="rb-bullet">▸</span>${g}</div>`).join('')}
+    </div>
+    <div class="result-block rb-yellow">
+      <div class="rb-title">⚡ Quick Wins (do today)</div>
+      ${r.quick_wins.map(q => `<div class="rb-item"><span class="rb-bullet">▸</span>${q}</div>`).join('')}
+    </div>
+    <div class="result-block rb-purple full-width">
+      <div class="rb-title">🏷️ Keyword Analysis</div>
+      <div style="display:flex;gap:20px;flex-wrap:wrap;margin-top:4px">
+        <div>
+          <div style="font-size:11px;font-weight:600;color:var(--green);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Matched</div>
+          <div class="keyword-chips">${r.keywords_matched.map(k => `<span class="chip chip-match">✓ ${k}</span>`).join('')}</div>
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:600;color:var(--red);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Missing</div>
+          <div class="keyword-chips">${r.keywords_missing.map(k => `<span class="chip chip-miss">✗ ${k}</span>`).join('')}</div>
+        </div>
+      </div>
+    </div>`;
+}
+</script>
+</body>
+</html>

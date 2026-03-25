@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>SummarAI — Instant AI Summarizer</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #f5f0e8;
+    --paper: #faf7f2;
+    --ink: #1a1408;
+    --red: #c0392b;
+    --muted: #8a7f72;
+    --border: #d4c9b8;
+    --highlight: #fffde0;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'IBM Plex Sans', sans-serif;
+    min-height: 100vh;
+  }
+
+  .masthead {
+    background: var(--ink);
+    color: var(--bg);
+    text-align: center;
+    padding: 18px 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .masthead::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: repeating-linear-gradient(90deg, rgba(255,255,255,0.03) 0px, rgba(255,255,255,0.03) 1px, transparent 1px, transparent 40px);
+  }
+  .masthead h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 36px;
+    letter-spacing: 4px;
+    position: relative;
+  }
+  .masthead p { font-size: 11px; color: var(--muted); letter-spacing: 3px; text-transform: uppercase; margin-top: 4px; position: relative; }
+
+  .container {
+    max-width: 820px;
+    margin: 0 auto;
+    padding: 32px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .api-row {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .api-row label { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); }
+  .api-row input {
+    background: var(--paper);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 10px 14px;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 13px;
+    color: var(--ink);
+    outline: none;
+    transition: border 0.2s;
+  }
+  .api-row input:focus { border-color: var(--ink); }
+
+  .columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  @media(max-width: 620px) { .columns { grid-template-columns: 1fr; } }
+
+  .panel {
+    background: var(--paper);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .panel-header {
+    background: var(--ink);
+    color: var(--bg);
+    padding: 10px 16px;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .panel-header .count { color: var(--muted); font-size: 10px; }
+  textarea {
+    width: 100%;
+    min-height: 260px;
+    background: none;
+    border: none;
+    padding: 16px;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 13px;
+    color: var(--ink);
+    resize: vertical;
+    outline: none;
+    line-height: 1.7;
+  }
+  textarea::placeholder { color: var(--muted); }
+
+  .output-area {
+    padding: 16px;
+    font-size: 13px;
+    line-height: 1.8;
+    min-height: 260px;
+    color: var(--ink);
+  }
+  .output-area .placeholder { color: var(--muted); font-style: italic; }
+  .bullet-item {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+    padding: 8px 12px;
+    background: var(--highlight);
+    border-left: 3px solid var(--red);
+    border-radius: 2px;
+    animation: slideIn 0.3s ease;
+  }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(-8px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  .bullet-marker { color: var(--red); font-weight: 700; flex-shrink: 0; }
+
+  .controls {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .mode-group {
+    display: flex;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .mode-btn {
+    padding: 8px 14px;
+    background: var(--paper);
+    border: none;
+    cursor: pointer;
+    font-size: 12px;
+    font-family: 'IBM Plex Sans', sans-serif;
+    color: var(--muted);
+    transition: all 0.15s;
+    border-right: 1px solid var(--border);
+  }
+  .mode-btn:last-child { border-right: none; }
+  .mode-btn.active { background: var(--ink); color: var(--bg); }
+  .mode-btn:hover:not(.active) { background: var(--bg); }
+
+  .go-btn {
+    background: var(--red);
+    color: white;
+    border: none;
+    padding: 10px 28px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: 'IBM Plex Sans', sans-serif;
+    letter-spacing: 0.5px;
+    transition: opacity 0.15s, transform 0.15s;
+  }
+  .go-btn:hover { opacity: 0.88; transform: translateY(-1px); }
+  .go-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  .clear-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 10px 16px;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    font-family: 'IBM Plex Sans', sans-serif;
+    transition: all 0.15s;
+  }
+  .clear-btn:hover { border-color: var(--ink); color: var(--ink); }
+
+  .stats-bar {
+    display: flex;
+    gap: 20px;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.5px;
+    border-top: 1px solid var(--border);
+    padding: 10px 16px;
+    background: var(--bg);
+  }
+  .stat strong { color: var(--ink); }
+
+  .spinner {
+    display: inline-block;
+    width: 16px; height: 16px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    vertical-align: middle;
+    margin-right: 6px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  footer { text-align: center; padding: 20px; font-size: 11px; color: var(--muted); letter-spacing: 1px; }
+</style>
+</head>
+<body>
+
+<div class="masthead">
+  <h1>SUMMARAI</h1>
+  <p>AI-Powered Text Summarizer &nbsp;·&nbsp; Claude API</p>
+</div>
+
+<div class="container">
+
+  <div class="api-row">
+    <label>Anthropic API Key</label>
+    <input type="password" id="apiKey" placeholder="sk-ant-..." />
+  </div>
+
+  <div class="controls">
+    <div class="mode-group">
+      <button class="mode-btn active" onclick="setMode('bullets', this)">Bullet Points</button>
+      <button class="mode-btn" onclick="setMode('short', this)">1 Paragraph</button>
+      <button class="mode-btn" onclick="setMode('eli5', this)">ELI5</button>
+      <button class="mode-btn" onclick="setMode('tldr', this)">TL;DR</button>
+    </div>
+    <button class="go-btn" id="goBtn" onclick="summarize()">Summarize →</button>
+    <button class="clear-btn" onclick="clearAll()">Clear</button>
+  </div>
+
+  <div class="columns">
+    <div class="panel">
+      <div class="panel-header">
+        <span>📄 Input Text</span>
+        <span class="count" id="wordCount">0 words</span>
+      </div>
+      <textarea id="inputText" placeholder="Paste any article, essay, report, or document here..."></textarea>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <span>✨ Summary</span>
+        <span class="count" id="summaryCount"></span>
+      </div>
+      <div class="output-area" id="outputArea">
+        <span class="placeholder">Your summary will appear here after you click Summarize →</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="stats-bar" id="statsBar" style="display:none;">
+    <span>Original: <strong id="origWords">—</strong> words</span>
+    <span>Summary: <strong id="sumWords">—</strong> words</span>
+    <span>Reduction: <strong id="reduction">—</strong></span>
+  </div>
+</div>
+
+<footer>AI PROJECT — Built with Claude API · Prompt Engineering Demo</footer>
+
+<script>
+let currentMode = 'bullets';
+
+function setMode(mode, el) {
+  currentMode = mode;
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+}
+
+const inputEl = document.getElementById('inputText');
+inputEl.addEventListener('input', () => {
+  const words = inputEl.value.trim().split(/\s+/).filter(Boolean).length;
+  document.getElementById('wordCount').textContent = words + ' words';
+});
+
+function clearAll() {
+  inputEl.value = '';
+  document.getElementById('wordCount').textContent = '0 words';
+  document.getElementById('outputArea').innerHTML = '<span class="placeholder">Your summary will appear here after you click Summarize →</span>';
+  document.getElementById('statsBar').style.display = 'none';
+  document.getElementById('summaryCount').textContent = '';
+}
+
+const PROMPTS = {
+  bullets: 'Summarize the following text as 4–6 concise bullet points. Each bullet should be a complete insight. Format: return ONLY the bullets, one per line, starting with "•".',
+  short: 'Summarize the following text in exactly one clear, well-written paragraph (3–5 sentences). No bullet points.',
+  eli5: 'Explain the following text like I am 5 years old. Use simple words, short sentences, and a friendly tone. Keep it under 100 words.',
+  tldr: 'Give a TL;DR for the following text in 1–2 sentences. Start with "TL;DR:"'
+};
+
+async function summarize() {
+  const apiKey = document.getElementById('apiKey').value.trim();
+  if (!apiKey) { alert('Enter your Anthropic API key first.'); return; }
+  const text = inputEl.value.trim();
+  if (!text) { alert('Paste some text to summarize.'); return; }
+
+  const btn = document.getElementById('goBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Summarizing...';
+
+  const outputArea = document.getElementById('outputArea');
+  outputArea.innerHTML = '<span class="placeholder">Thinking...</span>';
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{ role: 'user', content: `${PROMPTS[currentMode]}\n\n---\n${text}` }]
+      })
+    });
+    const data = await res.json();
+    const reply = data.content?.[0]?.text || 'Error — check your API key.';
+    renderOutput(reply);
+    updateStats(text, reply);
+  } catch(e) {
+    outputArea.innerHTML = '<span class="placeholder">⚠️ Network error. Check your API key.</span>';
+  }
+  btn.disabled = false;
+  btn.innerHTML = 'Summarize →';
+}
+
+function renderOutput(text) {
+  const outputArea = document.getElementById('outputArea');
+  if (currentMode === 'bullets') {
+    const lines = text.split('\n').filter(l => l.trim().startsWith('•') || l.trim().startsWith('-'));
+    outputArea.innerHTML = lines.map(l => `
+      <div class="bullet-item">
+        <span class="bullet-marker">▸</span>
+        <span>${l.replace(/^[•\-]\s*/, '')}</span>
+      </div>`).join('');
+  } else {
+    outputArea.innerHTML = `<div style="animation:slideIn 0.3s ease">${text.replace(/\n/g, '<br>')}</div>`;
+  }
+  const words = text.trim().split(/\s+/).filter(Boolean).length;
+  document.getElementById('summaryCount').textContent = words + ' words';
+}
+
+function updateStats(original, summary) {
+  const origW = original.trim().split(/\s+/).filter(Boolean).length;
+  const sumW = summary.trim().split(/\s+/).filter(Boolean).length;
+  const pct = Math.round((1 - sumW / origW) * 100);
+  document.getElementById('origWords').textContent = origW;
+  document.getElementById('sumWords').textContent = sumW;
+  document.getElementById('reduction').textContent = pct + '% shorter';
+  document.getElementById('statsBar').style.display = 'flex';
+}
+</script>
+</body>
+</html>

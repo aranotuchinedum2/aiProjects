@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>LabelAI — Intelligent Data Labeling Tool</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #030712;
+    --surface: #0d1117;
+    --card: #161d2e;
+    --border: #1e293b;
+    --text: #f1f5f9;
+    --muted: #64748b;
+    --blue: #3b82f6;
+    --cyan: #06b6d4;
+    --emerald: #10b981;
+    --amber: #f59e0b;
+    --rose: #f43f5e;
+    --violet: #8b5cf6;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    min-height: 100vh;
+  }
+
+  .topbar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    height: 56px;
+    gap: 16px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .tb-logo {
+    display: flex; align-items: center; gap: 8px;
+    font-weight: 800; font-size: 16px;
+  }
+  .tb-logo .icon {
+    width: 30px; height: 30px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, var(--blue), var(--cyan));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+  }
+  .tb-divider { width: 1px; height: 24px; background: var(--border); }
+  .tb-label { font-size: 12px; color: var(--muted); letter-spacing: 0.5px; }
+
+  .api-field {
+    margin-left: auto;
+    display: flex; align-items: center; gap: 8px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 12px;
+  }
+  .api-field span { font-size: 11px; color: var(--muted); white-space: nowrap; }
+  .api-field input {
+    background: none; border: none; color: var(--text);
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 12px; outline: none; width: 180px;
+  }
+
+  .workspace {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    gap: 0;
+    min-height: calc(100vh - 56px);
+  }
+  @media(max-width: 800px) { .workspace { grid-template-columns: 1fr; } }
+
+  .sidebar {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    overflow-y: auto;
+  }
+
+  .section-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--muted);
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+
+  .schema-builder {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .label-chip {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 12px;
+  }
+  .label-color { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .label-name { flex: 1; font-size: 13px; font-weight: 500; }
+  .label-count { font-size: 11px; color: var(--muted); }
+  .label-remove { color: var(--muted); cursor: pointer; font-size: 16px; line-height: 1; transition: color 0.15s; }
+  .label-remove:hover { color: var(--rose); }
+
+  .add-label-row {
+    display: flex; gap: 8px;
+  }
+  .add-label-row input {
+    flex: 1;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 12px;
+    color: var(--text);
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 13px;
+    outline: none;
+    transition: border 0.2s;
+  }
+  .add-label-row input:focus { border-color: var(--blue); }
+  .add-btn {
+    background: var(--blue);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 13px;
+    cursor: pointer;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 600;
+    transition: opacity 0.15s;
+  }
+  .add-btn:hover { opacity: 0.85; }
+
+  .examples-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .example-row {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  .example-text { flex: 1; font-size: 12px; line-height: 1.5; }
+  .example-label {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 12px;
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+
+  .ex-input-area { display: flex; flex-direction: column; gap: 8px; }
+  .ex-input-area textarea {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    color: var(--text);
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 12px;
+    resize: none;
+    outline: none;
+    line-height: 1.5;
+    height: 60px;
+  }
+  .ex-input-area textarea::placeholder { color: var(--muted); }
+  .label-selector {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .label-sel-btn {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.15s;
+    background: var(--card);
+  }
+  .label-sel-btn.selected { border-color: white; }
+  .add-example-btn {
+    background: var(--emerald);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    transition: opacity 0.15s;
+  }
+  .add-example-btn:hover { opacity: 0.85; }
+
+  /* Main area */
+  .main-area {
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .batch-input {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .batch-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .batch-header h3 { font-size: 13px; font-weight: 600; }
+  .batch-header .hint { font-size: 11px; color: var(--muted); }
+  .batch-input textarea {
+    width: 100%;
+    background: none;
+    border: none;
+    padding: 14px 16px;
+    color: var(--text);
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 13px;
+    resize: none;
+    outline: none;
+    line-height: 1.7;
+    min-height: 140px;
+  }
+  .batch-input textarea::placeholder { color: var(--muted); }
+  .batch-footer {
+    padding: 10px 16px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--surface);
+  }
+  .label-btn {
+    background: linear-gradient(135deg, var(--blue), var(--violet));
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 9px 20px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    transition: opacity 0.2s, transform 0.15s;
+  }
+  .label-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+  .label-btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+  .line-count { font-size: 11px; color: var(--muted); }
+
+  .results-table {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    display: none;
+    animation: fadeUp 0.4s ease;
+  }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+  .table-header {
+    display: grid;
+    grid-template-columns: 1fr 140px 80px;
+    padding: 10px 16px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--muted);
+    font-weight: 600;
+  }
+  .table-body { display: flex; flex-direction: column; }
+  .table-row {
+    display: grid;
+    grid-template-columns: 1fr 140px 80px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    align-items: center;
+    gap: 8px;
+    transition: background 0.15s;
+    animation: fadeIn 0.3s ease;
+  }
+  .table-row:last-child { border-bottom: none; }
+  .table-row:hover { background: var(--surface); }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  .row-text { font-size: 13px; line-height: 1.5; }
+  .conf-bar {
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-top: 4px;
+  }
+  .conf-fill { height: 100%; border-radius: 2px; }
+
+  .table-footer {
+    padding: 12px 16px;
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+    display: flex;
+    gap: 16px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .table-footer strong { color: var(--text); }
+
+  .export-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 7px 16px;
+    border-radius: 8px;
+    font-size: 12px;
+    cursor: pointer;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    transition: all 0.15s;
+    margin-left: auto;
+  }
+  .export-btn:hover { border-color: var(--emerald); color: var(--emerald); }
+
+  .spinner {
+    display: inline-block;
+    width: 14px; height: 14px;
+    border: 2px solid rgba(255,255,255,0.2);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    vertical-align: middle;
+    margin-right: 6px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="tb-logo"><div class="icon">🏷️</div>LabelAI</div>
+  <div class="tb-divider"></div>
+  <div class="tb-label">AI Training Data Labeling Tool · Claude API</div>
+  <div class="api-field">
+    <span>API KEY</span>
+    <input type="password" id="apiKey" placeholder="sk-ant-..."/>
+  </div>
+</div>
+
+<div class="workspace">
+
+  <div class="sidebar">
+
+    <!-- Label Schema -->
+    <div>
+      <div class="section-label">Label Schema</div>
+      <div class="schema-builder" id="schemaBuilder"></div>
+      <div class="add-label-row" style="margin-top:8px">
+        <input type="text" id="newLabelInput" placeholder="New label name..." onkeydown="if(event.key==='Enter')addLabel()"/>
+        <button class="add-btn" onclick="addLabel()">+ Add</button>
+      </div>
+    </div>
+
+    <!-- Training Examples -->
+    <div>
+      <div class="section-label">Training Examples <span style="color:var(--blue);font-size:10px">(few-shot)</span></div>
+      <div class="examples-list" id="examplesList"></div>
+
+      <div class="ex-input-area" style="margin-top:10px">
+        <textarea id="exText" placeholder="Add a labeled example to help the AI..."></textarea>
+        <div class="label-selector" id="labelSelector"></div>
+        <button class="add-example-btn" onclick="addExample()">+ Add Example</button>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="main-area">
+
+    <div class="batch-input">
+      <div class="batch-header">
+        <h3>📋 Batch Labeling</h3>
+        <span class="hint">One item per line</span>
+      </div>
+      <textarea id="batchInput" placeholder="Enter items to label, one per line:
+
+This product stopped working after 2 days
+Great value for money, very satisfied
+Shipping took forever
+Love the packaging and quality
+The instructions are confusing"></textarea>
+      <div class="batch-footer">
+        <button class="label-btn" id="labelBtn" onclick="runLabeling()">🏷️ Auto-Label All</button>
+        <span class="line-count" id="lineCount">0 items</span>
+      </div>
+    </div>
+
+    <div class="results-table" id="resultsTable">
+      <div class="table-header">
+        <span>Text</span>
+        <span>Label</span>
+        <span>Confidence</span>
+      </div>
+      <div class="table-body" id="tableBody"></div>
+      <div class="table-footer" id="tableFooter">
+        <span>Labeled: <strong id="statLabeled">0</strong></span>
+        <span>Avg confidence: <strong id="statConf">—</strong></span>
+        <button class="export-btn" onclick="exportCSV()">⬇ Export CSV</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const LABEL_COLORS = ['#3b82f6','#10b981','#f59e0b','#f43f5e','#8b5cf6','#06b6d4','#ec4899','#84cc16'];
+
+let labels = [
+  { name: 'POSITIVE', color: LABEL_COLORS[1] },
+  { name: 'NEGATIVE', color: LABEL_COLORS[3] },
+  { name: 'NEUTRAL', color: LABEL_COLORS[0] }
+];
+
+let examples = [
+  { text: 'This is the best product ever!', label: 'POSITIVE' },
+  { text: 'Complete waste of money.', label: 'NEGATIVE' },
+  { text: 'Arrived as described.', label: 'NEUTRAL' }
+];
+
+let selectedLabel = null;
+let results = [];
+
+function render() {
+  // Schema
+  document.getElementById('schemaBuilder').innerHTML = labels.map((l, i) => `
+    <div class="label-chip">
+      <div class="label-color" style="background:${l.color}"></div>
+      <div class="label-name">${l.name}</div>
+      <div class="label-count">${results.filter(r => r.label === l.name).length}</div>
+      <div class="label-remove" onclick="removeLabel(${i})">×</div>
+    </div>`).join('');
+
+  // Examples
+  document.getElementById('examplesList').innerHTML = examples.map(e => {
+    const lbl = labels.find(l => l.name === e.label);
+    return `<div class="example-row">
+      <div class="example-text">${e.text}</div>
+      <div class="example-label" style="background:${lbl?.color || '#64748b'}22;color:${lbl?.color || '#64748b'}">${e.label}</div>
+    </div>`;
+  }).join('');
+
+  // Label selector
+  document.getElementById('labelSelector').innerHTML = labels.map(l => `
+    <button class="label-sel-btn ${selectedLabel === l.name ? 'selected' : ''}" 
+      style="background:${l.color}22;color:${l.color};border-color:${selectedLabel === l.name ? l.color : 'transparent'}"
+      onclick="selectLabel('${l.name}')">${l.name}</button>`).join('');
+}
+
+function selectLabel(name) { selectedLabel = name; render(); }
+
+function addLabel() {
+  const input = document.getElementById('newLabelInput');
+  const name = input.value.trim().toUpperCase();
+  if (!name || labels.find(l => l.name === name)) return;
+  labels.push({ name, color: LABEL_COLORS[labels.length % LABEL_COLORS.length] });
+  input.value = '';
+  render();
+}
+
+function removeLabel(i) {
+  labels.splice(i, 1);
+  render();
+}
+
+function addExample() {
+  const text = document.getElementById('exText').value.trim();
+  if (!text || !selectedLabel) { alert('Enter text and select a label.'); return; }
+  examples.push({ text, label: selectedLabel });
+  document.getElementById('exText').value = '';
+  render();
+}
+
+// Line counter
+document.getElementById('batchInput').addEventListener('input', () => {
+  const lines = document.getElementById('batchInput').value.split('\n').filter(l => l.trim()).length;
+  document.getElementById('lineCount').textContent = lines + ' items';
+});
+
+async function runLabeling() {
+  const apiKey = document.getElementById('apiKey').value.trim();
+  if (!apiKey) { alert('Enter your Anthropic API key.'); return; }
+  if (labels.length === 0) { alert('Add at least one label.'); return; }
+
+  const raw = document.getElementById('batchInput').value;
+  const items = raw.split('\n').map(l => l.trim()).filter(Boolean);
+  if (items.length === 0) { alert('Enter items to label.'); return; }
+
+  const btn = document.getElementById('labelBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Labeling...';
+
+  const fewShot = examples.map(e => `"${e.text}" → ${e.label}`).join('\n');
+  const labelList = labels.map(l => l.name).join(', ');
+
+  const PROMPT = `You are an AI data labeling system. Label each item with exactly one of these labels: ${labelList}
+
+Few-shot examples:
+${fewShot}
+
+Now label these items. Respond ONLY with a JSON array, no markdown:
+[
+  { "text": "<original text>", "label": "<LABEL>", "confidence": <0-100> },
+  ...
+]
+
+Items to label:
+${items.map((t, i) => `${i + 1}. ${t}`).join('\n')}`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{ role: 'user', content: PROMPT }]
+      })
+    });
+    const data = await res.json();
+    const raw2 = data.content?.[0]?.text || '[]';
+    results = JSON.parse(raw2.replace(/```json|```/g, '').trim());
+    renderResults();
+  } catch(e) {
+    alert('Error. Check your API key and try again.');
+    console.error(e);
+  }
+  btn.disabled = false;
+  btn.innerHTML = '🏷️ Auto-Label All';
+}
+
+function renderResults() {
+  const table = document.getElementById('resultsTable');
+  table.style.display = 'block';
+  table.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+  document.getElementById('tableBody').innerHTML = results.map((r, i) => {
+    const lbl = labels.find(l => l.name === r.label);
+    const color = lbl?.color || '#64748b';
+    return `<div class="table-row" style="animation-delay:${i * 0.05}s">
+      <div class="row-text">${r.text}</div>
+      <div>
+        <span class="example-label" style="background:${color}22;color:${color}">${r.label}</span>
+      </div>
+      <div>
+        <span style="font-size:12px;font-weight:600">${r.confidence}%</span>
+        <div class="conf-bar"><div class="conf-fill" style="width:${r.confidence}%;background:${color}"></div></div>
+      </div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('statLabeled').textContent = results.length;
+  const avg = Math.round(results.reduce((a, r) => a + r.confidence, 0) / results.length);
+  document.getElementById('statConf').textContent = avg + '%';
+  render();
+}
+
+function exportCSV() {
+  if (!results.length) return;
+  const header = 'text,label,confidence\n';
+  const rows = results.map(r => `"${r.text.replace(/"/g, '""')}",${r.label},${r.confidence}`).join('\n');
+  const blob = new Blob([header + rows], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'labeled_data.csv';
+  a.click();
+}
+
+render();
+</script>
+</body>
+</html>
