@@ -286,19 +286,6 @@
 
   <div class="card">
     <div class="card-header">
-      <div class="icon">🔑</div>
-      <div>
-        <h3>API Key</h3>
-        <p>Your Anthropic key (never stored)</p>
-      </div>
-    </div>
-    <div class="card-body">
-      <input type="password" id="apiKey" placeholder="sk-ant-..." />
-    </div>
-  </div>
-
-  <div class="card">
-    <div class="card-header">
       <div class="icon">📝</div>
       <div>
         <h3>Your Resume + Job Description</h3>
@@ -343,11 +330,9 @@
 let lastResults = null;
 
 async function analyze() {
-  const apiKey = document.getElementById('apiKey').value.trim();
   const resume = document.getElementById('resumeText').value.trim();
   const job = document.getElementById('jobText').value.trim();
 
-  if (!apiKey) { alert('Enter your Anthropic API key.'); return; }
   if (!resume || !job) { alert('Please paste both your resume and the job description.'); return; }
 
   const btn = document.getElementById('analyzeBtn');
@@ -375,13 +360,10 @@ Job Description:
 ${job}`;
 
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetch('/api/proxy', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',

@@ -262,11 +262,6 @@
 
 <div class="container">
 
-  <div class="api-row">
-    <label>Anthropic API Key</label>
-    <input type="password" id="apiKey" placeholder="sk-ant-..." />
-  </div>
-
   <div class="controls">
     <div class="mode-group">
       <button class="mode-btn active" onclick="setMode('bullets', this)">Bullet Points</button>
@@ -357,8 +352,6 @@ const PROMPTS = {
 };
 
 async function summarize() {
-  const apiKey = document.getElementById('apiKey').value.trim();
-  if (!apiKey) { alert('Enter your Anthropic API key first.'); return; }
   const text = inputEl.value.trim();
   if (!text) { alert('Paste some text to summarize.'); return; }
 
@@ -370,13 +363,10 @@ async function summarize() {
   outputArea.innerHTML = '<span class="placeholder">Thinking...</span>';
 
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetch('/api/proxy', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',

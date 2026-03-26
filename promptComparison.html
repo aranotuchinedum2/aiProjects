@@ -358,10 +358,6 @@
     <span class="cursor"></span>
   </div>
   <div class="header-right">
-    <div class="api-mini">
-      <label>API_KEY=</label>
-      <input type="password" id="apiKey" placeholder="sk-ant-..."/>
-    </div>
     <div class="tag">PROMPT ENGINEERING DEMO</div>
   </div>
 </header>
@@ -469,8 +465,6 @@ function copyPanel(panel) {
 }
 
 async function run() {
-  const apiKey = document.getElementById('apiKey').value.trim();
-  if (!apiKey) { alert('Enter your Anthropic API key.'); return; }
   const question = document.getElementById('question').value.trim();
   if (!question) { alert('Enter a question or topic.'); return; }
 
@@ -491,11 +485,11 @@ async function run() {
   document.getElementById('analysisCard').style.display = 'none';
 
   const [resA, resB] = await Promise.all([
-    callAPI(apiKey, promptA, question, 'A'),
-    callAPI(apiKey, promptB, question, 'B')
+    callAPI(promptA, question, 'A'),
+    callAPI(promptB, question, 'B')
   ]);
 
-  if (resA && resB) await runAnalysis(apiKey, question, promptA, promptB, resA, resB);
+  if (resA && resB) await runAnalysis(question, promptA, promptB, resA, resB);
 
   btn.disabled = false;
   btn.textContent = '▶ Run Both Prompts';
@@ -507,16 +501,13 @@ function setLoading(panel) {
   el.innerHTML = `<div class="dot-loader"><div class="dot" style="background:${color}"></div><div class="dot" style="background:${color}"></div><div class="dot" style="background:${color}"></div></div>`;
 }
 
-async function callAPI(apiKey, system, question, panel) {
+async function callAPI(system, question, panel) {
   const start = Date.now();
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetch('/api/proxy', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
@@ -552,7 +543,7 @@ async function callAPI(apiKey, system, question, panel) {
   }
 }
 
-async function runAnalysis(apiKey, question, promptA, promptB, outA, outB) {
+async function runAnalysis(question, promptA, promptB, outA, outB) {
   const PROMPT = `You're comparing two AI outputs for prompt engineering analysis.
 
 Question asked: "${question}"
@@ -571,13 +562,10 @@ Respond ONLY with JSON (no markdown):
 }`;
 
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetch('/api/proxy', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',

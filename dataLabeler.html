@@ -396,10 +396,6 @@
   <div class="tb-logo"><div class="icon">🏷️</div>LabelAI</div>
   <div class="tb-divider"></div>
   <div class="tb-label">AI Training Data Labeling Tool · Claude API</div>
-  <div class="api-field">
-    <span>API KEY</span>
-    <input type="password" id="apiKey" placeholder="sk-ant-..."/>
-  </div>
 </div>
 
 <div class="workspace">
@@ -559,8 +555,6 @@ function clearResults() {
 }
 
 async function runLabeling() {
-  const apiKey = document.getElementById('apiKey').value.trim();
-  if (!apiKey) { alert('Enter your Anthropic API key.'); return; }
   if (labels.length === 0) { alert('Add at least one label.'); return; }
 
   const raw = document.getElementById('batchInput').value;
@@ -589,13 +583,10 @@ Items to label:
 ${items.map((t, i) => `${i + 1}. ${t}`).join('\n')}`;
 
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetch('/api/proxy', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
